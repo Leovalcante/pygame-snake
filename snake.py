@@ -28,7 +28,7 @@ class Fruit:
         screen.blit(self.apple, fruit_rect)
         # pygame.draw.rect(screen, (126, 166, 140), fruit_rect)
 
-    def replace(self):
+    def randomize(self):
         self.x = get_rand()
         self.y = get_rand()
         self.pos = Vector2(self.x, self.y)
@@ -37,7 +37,7 @@ class Fruit:
 class Snake:
     def __init__(self):
         self.body = [Vector2(7, 10), Vector2(6, 10), Vector2(5, 10)]
-        self.direction = Vector2(1, 0)
+        self.direction = Vector2(0, 0)
         self.new_block = False
 
         self.head_up = pygame.image.load(
@@ -90,6 +90,10 @@ class Snake:
             os.path.join("assets", "sounds", "crunch.wav")
         )
 
+    def reset(self):
+        self.body = [Vector2(7, 10), Vector2(6, 10), Vector2(5, 10)]
+        self.direction = Vector2(0, 0)
+
     def draw(self):
         last_body_index = len(self.body) - 1
         for i, block in enumerate(self.body):
@@ -134,13 +138,13 @@ class Snake:
         return self.body_tr
 
     def get_head_sprite(self):
-        if self.direction.x == 1:
-            return self.head_right
+        if self.direction.y == -1:
+            return self.head_up
         elif self.direction.x == -1:
             return self.head_left
         elif self.direction.y == 1:
             return self.head_down
-        return self.head_up
+        return self.head_right
 
     def get_tail_sprite(self):
         result = self.body[-2] - self.body[-1]
@@ -171,7 +175,6 @@ class Game:
     def __init__(self):
         self.snake = Snake()
         self.fruit = Fruit()
-        self.score = 0
         self.game_over_sound = pygame.mixer.Sound(
             os.path.join("assets", "sounds", "game_over.wav")
         )
@@ -189,9 +192,10 @@ class Game:
 
     def check_collision(self):
         if self.fruit.pos == self.snake.body[0]:
-            self.fruit.replace()
             self.snake.eat()
-            self.score += 1
+            self.fruit.randomize()
+            while self.fruit.pos in self.snake.body:
+                self.fruit.randomize()
 
     def check_fail(self):
         head = self.snake.body[0]
@@ -202,14 +206,20 @@ class Game:
             self.game_over()
 
         # snake check
-        if head in self.snake.body[1:]:
-            self.game_over()
+        # if head in self.snake.body[1:]:
+        #     print(head)
+        #     print(self.snake.body[1:])
+        #     print("here?")
+        #     self.game_over()
+        for block in self.snake.body[1:]:
+            if block == self.snake.body[0]:
+                self.game_over()
 
     def game_over(self):
-        self.game_over_sound.play()
-        pygame.time.delay(2000)
-        pygame.quit()
-        sys.exit()
+        if self.snake.direction != (0, 0):
+            self.game_over_sound.play()
+            pygame.time.delay(2000)
+        self.snake.reset()
 
     def draw_grass(self):
         grass_color = (169, 209, 61)
@@ -220,7 +230,8 @@ class Game:
                     pygame.draw.rect(screen, grass_color, grass_rect)
 
     def draw_score(self):
-        score_surface = game_font.render(str(self.score), True, pygame.Color("black"))
+        score = len(self.snake.body) - 3
+        score_surface = game_font.render(str(score), True, pygame.Color("black"))
         score_x = cell_size * cell_number - 60
         score_y = cell_size * cell_number - 40
         score_rect = score_surface.get_rect(center=(score_x, score_y))
@@ -243,6 +254,7 @@ cell_size = 40
 cell_number = 20
 window_size = cell_size * cell_number
 
+pygame.mixer.pre_init()
 pygame.init()
 screen = pygame.display.set_mode((window_size, window_size))
 clock = pygame.time.Clock()
