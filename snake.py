@@ -19,10 +19,13 @@ class Fruit:
         self.x = get_rand()
         self.y = get_rand()
         self.pos = Vector2(self.x, self.y)
+        self.apple = pygame.image.load(
+            os.path.join("assets", "images", "apple.png")
+        ).convert_alpha()
 
     def draw(self):
         fruit_rect = get_grid_rect(self.x, self.y)
-        screen.blit(apple, fruit_rect)
+        screen.blit(self.apple, fruit_rect)
         # pygame.draw.rect(screen, (126, 166, 140), fruit_rect)
 
     def replace(self):
@@ -37,10 +40,117 @@ class Snake:
         self.direction = Vector2(1, 0)
         self.new_block = False
 
+        self.head_up = pygame.image.load(
+            os.path.join("assets", "images", "head_up.png")
+        ).convert_alpha()
+        self.head_down = pygame.image.load(
+            os.path.join("assets", "images", "head_down.png")
+        ).convert_alpha()
+        self.head_right = pygame.image.load(
+            os.path.join("assets", "images", "head_right.png")
+        ).convert_alpha()
+        self.head_left = pygame.image.load(
+            os.path.join("assets", "images", "head_left.png")
+        ).convert_alpha()
+
+        self.tail_up = pygame.image.load(
+            os.path.join("assets", "images", "tail_up.png")
+        ).convert_alpha()
+        self.tail_down = pygame.image.load(
+            os.path.join("assets", "images", "tail_down.png")
+        ).convert_alpha()
+        self.tail_right = pygame.image.load(
+            os.path.join("assets", "images", "tail_right.png")
+        ).convert_alpha()
+        self.tail_left = pygame.image.load(
+            os.path.join("assets", "images", "tail_left.png")
+        ).convert_alpha()
+
+        self.body_vertical = pygame.image.load(
+            os.path.join("assets", "images", "body_vertical.png")
+        ).convert_alpha()
+        self.body_horizontal = pygame.image.load(
+            os.path.join("assets", "images", "body_horizontal.png")
+        ).convert_alpha()
+
+        self.body_tr = pygame.image.load(
+            os.path.join("assets", "images", "body_tr.png")
+        ).convert_alpha()
+        self.body_tl = pygame.image.load(
+            os.path.join("assets", "images", "body_tl.png")
+        ).convert_alpha()
+        self.body_br = pygame.image.load(
+            os.path.join("assets", "images", "body_br.png")
+        ).convert_alpha()
+        self.body_bl = pygame.image.load(
+            os.path.join("assets", "images", "body_bl.png")
+        ).convert_alpha()
+
+        self.crunch_sound = pygame.mixer.Sound(
+            os.path.join("assets", "sounds", "crunch.wav")
+        )
+
     def draw(self):
-        for block in self.body:
+        last_body_index = len(self.body) - 1
+        for i, block in enumerate(self.body):
             block_rect = get_grid_rect(block.x, block.y)
-            pygame.draw.rect(screen, (183, 111, 122), block_rect)
+            if i == 0:
+                screen.blit(self.get_head_sprite(), block_rect)
+            elif i == last_body_index:
+                screen.blit(self.get_tail_sprite(), block_rect)
+            else:
+                screen.blit(
+                    self.get_block_sprite(block, self.body[i - 1], self.body[i + 1]),
+                    block_rect,
+                )
+
+    def get_block_sprite(self, block, previous, next):
+        prev_relation = previous - block
+        next_relation = next - block
+        if prev_relation.x == next_relation.x:
+            return self.body_vertical
+
+        if prev_relation.y == next_relation.y:
+            return self.body_horizontal
+
+        #     -1
+        # -1 | 0 | 1
+        #      1
+        sum_relation = prev_relation + next_relation
+        if sum_relation.x == sum_relation.y:
+            if sum_relation.x == 1:
+                return self.body_br
+            else:
+                return self.body_tl
+
+        if (
+            prev_relation.x == -1
+            and next_relation.y == 1
+            or next_relation.x == -1
+            and prev_relation.y == 1
+        ):
+            return self.body_bl
+
+        return self.body_tr
+
+    def get_head_sprite(self):
+        if self.direction.x == 1:
+            return self.head_right
+        elif self.direction.x == -1:
+            return self.head_left
+        elif self.direction.y == 1:
+            return self.head_down
+        return self.head_up
+
+    def get_tail_sprite(self):
+        result = self.body[-2] - self.body[-1]
+        if result.x == 1:
+            return self.tail_left
+        elif result.x == -1:
+            return self.tail_right
+        elif result.y == 1:
+            return self.tail_up
+        return self.tail_down
 
     def move(self):
         if self.new_block:
@@ -54,6 +164,7 @@ class Snake:
 
     def eat(self):
         self.new_block = True
+        self.crunch_sound.play()
 
 
 class Game:
@@ -61,6 +172,9 @@ class Game:
         self.snake = Snake()
         self.fruit = Fruit()
         self.score = 0
+        self.game_over_sound = pygame.mixer.Sound(
+            os.path.join("assets", "sounds", "game_over.wav")
+        )
 
     def update(self):
         self.snake.move()
@@ -68,6 +182,7 @@ class Game:
         self.check_fail()
 
     def draw(self):
+        self.draw_grass()
         self.snake.draw()
         self.fruit.draw()
 
@@ -90,8 +205,18 @@ class Game:
             self.game_over()
 
     def game_over(self):
+        self.game_over_sound.play()
+        pygame.time.delay(2000)
         pygame.quit()
         sys.exit()
+
+    def draw_grass(self):
+        grass_color = (169, 209, 61)
+        for row in range(cell_number):
+            for col in range(cell_number):
+                if (row + col) % 2 == 0:
+                    grass_rect = get_grid_rect(col, row)
+                    pygame.draw.rect(screen, grass_color, grass_rect)
 
 
 cell_size = 40
@@ -101,8 +226,7 @@ window_size = cell_size * cell_number
 pygame.init()
 screen = pygame.display.set_mode((window_size, window_size))
 clock = pygame.time.Clock()
-
-apple = pygame.image.load(os.path.join("assets", "apple.png")).convert_alpha()
+game_font = pygame.font.SysFont("Comic Sans MS")
 
 SCREEN_UPDATE_EVENT = pygame.USEREVENT
 pygame.time.set_timer(SCREEN_UPDATE_EVENT, 150)
