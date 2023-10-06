@@ -1,3 +1,4 @@
+import os
 import sys
 from random import randint
 
@@ -21,7 +22,8 @@ class Fruit:
 
     def draw(self):
         fruit_rect = get_grid_rect(self.x, self.y)
-        pygame.draw.rect(screen, (126, 166, 140), fruit_rect)
+        screen.blit(apple, fruit_rect)
+        # pygame.draw.rect(screen, (126, 166, 140), fruit_rect)
 
     def replace(self):
         self.x = get_rand()
@@ -58,6 +60,7 @@ class Game:
     def __init__(self):
         self.snake = Snake()
         self.fruit = Fruit()
+        self.score = 0
 
     def update(self):
         self.snake.move()
@@ -72,6 +75,7 @@ class Game:
         if self.fruit.pos == self.snake.body[0]:
             self.fruit.replace()
             self.snake.eat()
+            self.score += 1
 
     def check_fail(self):
         head = self.snake.body[0]
@@ -83,9 +87,6 @@ class Game:
 
         # snake check
         if head in self.snake.body[1:]:
-            print(head)
-            print(self.snake.body[1:])
-            print("machedavero?")
             self.game_over()
 
     def game_over(self):
@@ -100,6 +101,8 @@ window_size = cell_size * cell_number
 pygame.init()
 screen = pygame.display.set_mode((window_size, window_size))
 clock = pygame.time.Clock()
+
+apple = pygame.image.load(os.path.join("assets", "apple.png")).convert_alpha()
 
 SCREEN_UPDATE_EVENT = pygame.USEREVENT
 pygame.time.set_timer(SCREEN_UPDATE_EVENT, 150)
